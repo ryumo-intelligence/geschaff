@@ -1,0 +1,102 @@
+package servlet;
+
+
+import java.io.*;
+import javax.servlet.*;
+import javax.servlet.http.*;
+
+import bean.Book;
+import dao.BookDAO;
+
+public class InsertServlet extends HttpServlet {
+
+	//doGetメソッドを定義
+	public void doGet(HttpServletRequest request ,HttpServletResponse response)
+			throws ServletException ,IOException{
+
+		String error = "";
+		String cmd = "";
+
+		try {
+
+			//文字コード指定
+			request.setCharacterEncoding("UTF-8");
+
+			//パラメータの取得
+			String isbn= request.getParameter("isbn");
+			String title = request.getParameter("title");
+			String strPrice = request.getParameter("price");
+
+			//ISBN空白チェック
+			if(isbn.equals("")) {
+				error = "ISBNが未入力の為、書籍登録処理は行えませんでした。";
+				cmd = "list";
+				return;
+			}
+
+			//Title空白チェック
+			if(title.equals("")) {
+				error = "タイトルが未入力の為、書籍登録処理は行えませんでした。";
+				cmd = "list";
+				return;
+			}
+
+			//Price空白チェック
+			if(strPrice.equals("")) {
+				error = "価格が未入力の為、書籍登録書理は行えませんでした。";
+				cmd = "list";
+				return;
+			}
+
+			//整数かどうかのチェック
+			int price;
+			try {
+				price = Integer.parseInt(strPrice);
+			}catch(NumberFormatException e) {
+				error = "価格の値が不正な為、書籍登録処理は行えませんでした。";
+				cmd = "list";
+				return;
+			}
+
+			//BookDAOオブジェクトを生成
+			BookDAO objDao = new BookDAO();
+
+			//ISBN重複チェック
+			if(objDao.selectByIsbn(isbn).getIsbn() != null) {
+				error = "入力ISBNは既に登録済みの為、書籍登録処理は行えませんでした。";
+				cmd = "list";
+				return;
+			}
+
+			//Bookオブジェクトを生成
+			Book book = new Book();
+			book.setIsbn(isbn);
+			book.setTitle(title);
+			book.setPrice(price);
+
+			//オブジェクトに格納
+			objDao.insert(book);
+
+		}catch(IllegalStateException e) {
+			error = "DB接続エラーの為、登録できませんでした。";
+			cmd = "menu";
+
+		}catch(Exception e){
+			error ="予期せぬエラーが発生しました。<br>"+e;
+			cmd = "menu";
+
+		}finally {
+
+			if(error.equals("")) {
+				//フォワードの実行
+				request.getRequestDispatcher("/list").forward(request, response);
+			}
+			request.setAttribute("error", error);
+			request.setAttribute("cmd", cmd);
+			request.getRequestDispatcher("/view/error.jsp").forward(request, response);
+		}
+
+	}
+
+
+}
